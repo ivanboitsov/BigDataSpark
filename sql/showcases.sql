@@ -2,13 +2,19 @@
 SELECT
     p.product_id,
     p.product_name,
+    p.category,
+    p.rating AS avg_rating,
+    p.reviews AS total_reviews,
     SUM(f.sale_quantity) AS total_quantity,
     SUM(f.sale_total_price) AS total_revenue
 FROM fact_sales f
 JOIN dim_product p ON f.product_id = p.product_id
 GROUP BY
     p.product_id,
-    p.product_name
+    p.product_name,
+    p.category,
+    p.rating,
+    p.reviews
 ORDER BY total_quantity DESC
 LIMIT 10;
 
@@ -30,7 +36,7 @@ SELECT
     p.rating AS avg_rating,
     p.reviews AS total_reviews
 FROM dim_product p
-ORDER BY avg_rating DESC;
+ORDER BY avg_rating DESC, total_reviews DESC;
 
 -- 2.1 Топ-10 клиентов с наибольшей общей суммой покупок
 SELECT
@@ -80,20 +86,15 @@ FROM fact_sales f
 GROUP BY year, month
 ORDER BY year, month;
 
--- 3.2 Сравнение выручки за разные периоды
+-- 3.2 Сравнение выручки за разные периоды (по кварталам)
 SELECT
     EXTRACT(YEAR FROM f.sale_date) AS year,
-    CASE
-        WHEN EXTRACT(MONTH FROM f.sale_date) IN (12, 1, 2) THEN 'Winter'
-        WHEN EXTRACT(MONTH FROM f.sale_date) IN (3, 4, 5) THEN 'Sprint'
-        WHEN EXTRACT(MONTH FROM f.sale_date) IN (6, 7, 8) THEN 'Summer'
-        WHEN EXTRACT(MONTH FROM f.sale_date) IN (9, 10, 11) THEN 'Autumn'
-    END AS season,
+    EXTRACT(QUARTER FROM f.sale_date) AS quarter,
     SUM(f.sale_quantity) AS total_quantity,
     SUM(f.sale_total_price) AS total_revenue
 FROM fact_sales f
-GROUP BY year, season
-ORDER BY year, season;
+GROUP BY year, quarter
+ORDER BY year, quarter;
 
 -- 3.3 Средний размер заказа по месяцам
 SELECT
@@ -181,10 +182,10 @@ GROUP BY l.country
 ORDER BY total_revenue DESC;
 
 -- 6.1 Продукты с наивысшим и наименьшим рейтингом
-(SELECT product_id, product_name, category, rating, 'top' AS rank_type
+(SELECT product_id, product_name, category, price, rating, 'top' AS rank_type
 FROM dim_product ORDER BY rating DESC LIMIT 10)
 UNION ALL
-(SELECT product_id, product_name, category, rating, 'bottom' AS rank_type
+(SELECT product_id, product_name, category, price, rating, 'bottom' AS rank_type
 FROM dim_product ORDER BY rating ASC LIMIT 10);
 
 -- 6.2 Корреляция между рейтингом и объемом продаж
@@ -196,12 +197,14 @@ SELECT
 FROM fact_sales f
 JOIN dim_product p ON f.product_id = p.product_id
 GROUP BY p.product_id, p.product_name, p.rating
-ORDER BY p.rating DESC;
+ORDER BY p.rating DESC, total_quantity DESC;
 
 -- 6.3 Продукты с наибольшим количеством отзывов
 SELECT
     p.product_id,
     p.product_name,
+    p.category,
+    p.price,
     p.reviews AS total_reviews
 FROM dim_product p
 ORDER BY total_reviews DESC;

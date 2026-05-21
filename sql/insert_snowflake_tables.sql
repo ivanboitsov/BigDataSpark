@@ -14,15 +14,15 @@ FROM (
     UNION
 
     -- supplier location
-    SELECT supplier_country AS country, NULL AS state, NULL AS city, NULL AS postal_code, NULL AS location FROM mock_data
+    SELECT supplier_country AS country, NULL AS state, supplier_city AS city, NULL AS postal_code, NULL AS location FROM mock_data
 ) locations
 WHERE country IS NOT NULL OR city IS NOT NULL OR state IS NOT NULL OR postal_code IS NOT NULL OR location IS NOT NULL
 ON CONFLICT (country, city, state, postal_code, location) DO NOTHING;
 
 INSERT INTO dim_pet (pet_type, pet_name, pet_breed)
 SELECT DISTINCT 
-    customer_pet_type, 
-    customer_pet_name, 
+    customer_pet_type,
+    customer_pet_name,
     customer_pet_breed
 FROM mock_data
 WHERE customer_pet_type IS NOT NULL

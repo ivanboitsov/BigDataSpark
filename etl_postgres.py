@@ -1,7 +1,7 @@
 from pyspark.sql import SparkSession
 from pyspark.sql import functions
 
-from app.core.config import PG_URL, PG_PROPS, PG_JAR
+from core.config import PG_URL, PG_PROPS, PG_JAR
 
 
 spark = SparkSession.builder \
@@ -42,7 +42,7 @@ store_loc = df.select(
 supplier_loc = df.select(
     functions.col("supplier_country").alias("country"),
     functions.lit(None).cast("string").alias("state"),
-    functions.lit(None).cast("string").alias("city"),
+    functions.lit("supplier_city").cast("string").alias("city"),
     functions.lit(None).cast("string").alias("postal_code"),
     functions.lit(None).cast("string").alias("location")
 )
@@ -256,5 +256,5 @@ fact_sales = df.select(
 fact_sales.write.jdbc(url=PG_URL, table="fact_sales", mode="append", properties=PG_PROPS)
 
 
-print("Done!")
+print("etl_postgres.py is done!")
 spark.stop()

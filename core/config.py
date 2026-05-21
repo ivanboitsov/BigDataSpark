@@ -16,7 +16,7 @@ CH_USER = os.getenv("CH_USER")
 CH_PASSWORD = os.getenv("CH_PASSWORD")
 
 PG_JAR = "/opt/spark/jars/postgresql-42.7.3.jar"
-CH_JAR = "/path/to/clickhouse-jdbc.jar"
+CH_JAR = "/opt/spark/jars/clickhouse-jdbc-0.4.6-all.jar"
 
 PG_URL = f"jdbc:postgresql://{PG_HOST}:{PG_PORT}/{PG_DB}"
 PG_PROPS = {
@@ -25,7 +25,7 @@ PG_PROPS = {
     "driver": "org.postgresql.Driver"
 }
 
-CH_URL = f"jdbc:clickhouse://{CH_HOST}:{CH_PORT}/{CH_DB}"
+CH_URL = f"jdbc:clickhouse://{CH_HOST}:{CH_PORT}/{CH_DB}?compress=0&ssl=false"
 CH_PROPS = {
     "user": CH_USER,
     "password": CH_PASSWORD,

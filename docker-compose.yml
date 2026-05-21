@@ -1,17 +1,92 @@
 services:
+
   postgres:
     image: postgres:16
-    container_name: petshop_snowflake
+    container_name: petshop_postgres
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: petshop_db
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DB}
     ports:
-      - "5433:5433"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./data:/data
-      - ./init:/docker-entrypoint-initdb.d
+      - ./init_mock_data.sql:/docker-entrypoint-initdb.d/01_init_mock_data.sql
+      - ./init_snowflake_tables.sql:/docker-entrypoint-initdb.d/02_init_snowflake_tables.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ${PG_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3
+    container_name: petshop_clickhouse
+    environment:
+      CLICKHOUSE_DB: ${CH_DB}
+      CLICKHOUSE_USER: ${CH_USER}
+      CLICKHOUSE_PASSWORD: ${CH_PASSWORD}
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --user ${CH_USER} --password ${CH_PASSWORD} --query 'SELECT 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  spark-etl-postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
+    container_name: petshop_spark_postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - PYTHONPATH=/app
+    env_file:
+      - .env
+    volumes:
+      - ./etl_postgres.py:/app/etl_postgres.py
+      - ./core:/app/core
+      - /opt/spark/jars/postgresql-42.7.3.jar:/opt/spark/jars/postgresql-42.7.3.jar
+    command: >
+      /opt/spark/bin/spark-submit
+      --master local[*]
+      --jars /opt/spark/jars/postgresql-42.7.3.jar
+      /app/etl_postgres.py
+
+  spark-etl-clickhouse:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
+    container_name: petshop_spark_clickhouse
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      spark-etl-postgres:
+        condition: service_completed_successfully
+    environment:
+      - PYTHONPATH=/app
+    env_file:
+      - .env
+    volumes:
+      - ./etl_clickhouse.py:/app/etl_clickhouse.py
+      - ./core:/app/core
+      - /opt/spark/jars/postgresql-42.7.3.jar:/opt/spark/jars/postgresql-42.7.3.jar
+      - /opt/spark/jars/clickhouse-jdbc-0.4.6-all.jar:/opt/spark/jars/clickhouse-jdbc-0.4.6-all.jar
+    command: >
+      /opt/spark/bin/spark-submit
+      --master local[*]
+      --jars /opt/spark/jars/postgresql-42.7.3.jar,/opt/spark/jars/clickhouse-jdbc-0.4.6-all.jar
+      /app/etl_clickhouse.py
 
 volumes:
   postgres_data:
+  clickhouse_data:
