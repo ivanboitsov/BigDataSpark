@@ -30,4 +30,5 @@ CH_PROPS = {
     "user": CH_USER,
     "password": CH_PASSWORD,
     "driver": "com.clickhouse.jdbc.ClickHouseDriver",
+    "createTableOptions": "ENGINE=MergeTree() ORDER BY tuple()"
 }

@@ -62,22 +62,49 @@ echo "fact_sales sample:"
 docker exec petshop_postgres psql -U postgres -d petshop_db -c "SELECT * FROM fact_sales LIMIT 10;"
 
 # Check ClickHouse tables
-echo "ClickHouse tables:"
-docker exec petshop_clickhouse clickhouse-client \
-    --user "${CH_USER}" \
-    --password "${CH_PASSWORD}" \
-    --database "${CH_DB}" \
-    --query "SHOW TABLES"
-
-echo "ClickHouse row counts:"
+echo "ClickHouse tables and row counts:"
 docker exec petshop_clickhouse clickhouse-client \
     --user "${CH_USER}" \
     --password "${CH_PASSWORD}" \
     --database "${CH_DB}" \
     --query "
-SELECT table, sum(rows) AS row_count
+SELECT
+    table,
+    sum(rows) AS row_count,
+    formatReadableSize(sum(bytes)) AS size
 FROM system.parts
 WHERE database = '${CH_DB}' AND active
 GROUP BY table
 ORDER BY table;
 "
+
+echo ""
+echo "Sample data from each report:"
+
+for table in \
+    report_1_1_top_products \
+    report_1_2_product_category_revenue \
+    report_1_3_avg_products_rating \
+    report_2_1_top_customers \
+    report_2_2_customer_by_country \
+    report_2_3_customers_avg_check \
+    report_3_1_monthly_trends \
+    report_3_2_seasonal_revenue \
+    report_3_3_avg_order_by_month \
+    report_4_1_top_stores \
+    report_4_2_sales_by_city \
+    report_4_3_store_avg_check \
+    report_5_1_top_suppliers \
+    report_5_2_supplier_avg_price \
+    report_5_3_supplier_sales_by_country \
+    report_6_1_product_rating_extremes \
+    report_6_2_rating_sales_correlation \
+    report_6_3_most_reviewed_products; do
+    echo "--- $table ---"
+    docker exec petshop_clickhouse clickhouse-client \
+        --user "${CH_USER}" \
+        --password "${CH_PASSWORD}" \
+        --database "${CH_DB}" \
+        --query "SELECT * FROM ${table} LIMIT 3 FORMAT PrettyCompact"
+    echo ""
+done

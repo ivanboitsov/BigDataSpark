@@ -42,7 +42,7 @@ store_loc = df.select(
 supplier_loc = df.select(
     functions.col("supplier_country").alias("country"),
     functions.lit(None).cast("string").alias("state"),
-    functions.lit("supplier_city").cast("string").alias("city"),
+    functions.col("supplier_city").cast("string").alias("city"),
     functions.lit(None).cast("string").alias("postal_code"),
     functions.lit(None).cast("string").alias("location")
 )
